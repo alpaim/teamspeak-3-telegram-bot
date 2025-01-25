@@ -1,21 +1,25 @@
-# Use the official Python image as base
-FROM python:alpine
+# Build stage
+FROM python:alpine as builder
 
-# Set the working directory in the container
 WORKDIR /app
 
-# Install system dependencies
-RUN apk update \
-    && apk add --no-cache gcc musl-dev libffi-dev openssl-dev
+# Install build dependencies
+RUN apk add --no-cache gcc musl-dev libffi-dev openssl-dev
 
-# Install Python dependencies
-COPY requirements.txt /app/
+# Install dependencies
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the application code into the container
-COPY . /app/
+# Runtime stage
+FROM python:alpine
 
-# Command to run the application
-CMD ["python3", "main.py"]
+WORKDIR /app
+
+# Copy only the necessary files from builder
+COPY --from=builder /usr/local/lib/python3.*/site-packages/ /usr/local/lib/python3.*/site-packages/
+COPY . .
+
+# Remove unnecessary files
+RUN rm -rf __pycache__ *.pyc *.pyo *.pyd .Python
 
 ENTRYPOINT ["python3", "main.py"]
